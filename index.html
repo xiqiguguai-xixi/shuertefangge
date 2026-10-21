@@ -9,9 +9,7 @@
 <title>舒尔特方格</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
   html, body { height: 100%; overflow: hidden; }
-
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -20,7 +18,6 @@
     user-select: none;
     -webkit-user-select: none;
   }
-
   .app {
     position: fixed;
     inset: 0;
@@ -28,8 +25,6 @@
     flex-direction: column;
     background: radial-gradient(circle at 50% 0%, #1a2340 0%, #0b0e16 55%);
   }
-
-  /* ---------- 通用 ---------- */
   .screen {
     display: none;
     flex: 1;
@@ -40,7 +35,6 @@
     padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   .screen.active { display: flex; }
-
   .btn {
     padding: 14px 28px;
     border-radius: 14px;
@@ -59,7 +53,6 @@
     border-color: transparent;
     box-shadow: 0 8px 24px rgba(79, 140, 255, 0.35);
   }
-
   .icon-btn {
     width: 42px;
     height: 42px;
@@ -76,7 +69,6 @@
   }
   .icon-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.1); }
 
-  /* ---------- 主菜单 ---------- */
   #screen-menu.active {
     justify-content: center;
     align-items: center;
@@ -109,7 +101,6 @@
   }
   .menu-stats b { color: #9fb6e8; font-weight: 700; }
 
-  /* ---------- 页面头部 ---------- */
   .page-head {
     display: flex;
     align-items: center;
@@ -120,7 +111,6 @@
   .page-head h2 { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
   .page-head .spacer { flex: 1; }
 
-  /* ---------- 关卡选择 ---------- */
   #level-list {
     flex: 1;
     min-height: 0;
@@ -165,7 +155,6 @@
   .level-btn.s2 { border-color: rgba(180, 200, 230, 0.38); color: #cfdcf5; background: rgba(180, 200, 230, 0.07); }
   .level-btn.s1 { border-color: rgba(150, 170, 205, 0.2);  color: #9fb0cc; background: rgba(150, 170, 205, 0.05); }
 
-  /* ---------- 自由练习 ---------- */
   .size-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -190,7 +179,6 @@
   .size-btn .n { font-size: 22px; font-weight: 700; }
   .size-btn .d { font-size: 11px; color: #8794b3; letter-spacing: 1px; }
 
-  /* ---------- 游戏界面 ---------- */
   .game-top {
     display: flex;
     align-items: center;
@@ -206,7 +194,6 @@
     text-align: center;
     flex: 1;
   }
-
   .timer-row {
     text-align: center;
     padding: 10px 0 6px;
@@ -225,7 +212,6 @@
     color: transparent;
   }
   .timer.frozen { background: linear-gradient(180deg, #ffd97a, #ff9f4d); -webkit-background-clip: text; background-clip: text; }
-
   .board-wrap {
     flex: 1;
     min-height: 0;
@@ -233,13 +219,11 @@
     align-items: center;
     justify-content: center;
   }
-
   #board {
     display: grid;
     gap: 6px;
     touch-action: manipulation;
   }
-
   .cell {
     display: flex;
     align-items: center;
@@ -275,7 +259,6 @@
     60% { transform: translateX(5px); }
     80% { transform: translateX(-2px); }
   }
-
   .game-bottom {
     display: flex;
     justify-content: center;
@@ -291,7 +274,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* ---------- 结果弹窗 ---------- */
   .modal {
     position: fixed;
     inset: 0;
@@ -329,7 +311,6 @@
   }
   .star { color: rgba(255, 255, 255, 0.12); transition: color 0.25s, text-shadow 0.25s; }
   .star.on { color: #ffcc4d; text-shadow: 0 0 20px rgba(255, 204, 77, 0.6); }
-
   .modal-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
   .result-time {
     font-size: 46px;
@@ -344,7 +325,6 @@
   .modal-btns { display: flex; flex-direction: column; gap: 10px; }
   .modal-btns .btn { width: 100%; padding: 13px; font-size: 16px; }
 
-  /* ---------- 云同步 ---------- */
   .sync-code {
     padding: 14px;
     border-radius: 12px;
@@ -364,7 +344,6 @@
 
 <div class="app">
 
-  <!-- ========== 主菜单 ========== -->
   <section class="screen active" id="screen-menu">
     <div class="logo">舒尔特方格</div>
     <div class="subtitle">专注 · 视觉搜索 · 反应力</div>
@@ -376,7 +355,6 @@
     <div class="menu-stats" id="menu-stats"></div>
   </section>
 
-  <!-- ========== 关卡选择 ========== -->
   <section class="screen" id="screen-levels">
     <div class="page-head">
       <button class="icon-btn" data-go="menu">←</button>
@@ -386,7 +364,6 @@
     <div id="level-list"></div>
   </section>
 
-  <!-- ========== 自由练习 ========== -->
   <section class="screen" id="screen-free">
     <div class="page-head">
       <button class="icon-btn" data-go="menu">←</button>
@@ -399,22 +376,18 @@
     <div class="size-grid" id="size-list"></div>
   </section>
 
-  <!-- ========== 游戏 ========== -->
   <section class="screen" id="screen-game">
     <div class="game-top">
       <button class="icon-btn" data-go="back">✕</button>
       <div class="game-title" id="game-title">第 1 关</div>
       <button class="icon-btn" id="btn-restart">↻</button>
     </div>
-
     <div class="timer-row">
       <div class="timer" id="timer">0.0</div>
     </div>
-
     <div class="board-wrap">
       <div id="board"></div>
     </div>
-
     <div class="game-bottom">
       <span>进度 <b id="progress-num">0/25</b></span>
       <span>错误 <b id="err-num">0</b></span>
@@ -423,7 +396,6 @@
 
 </div>
 
-<!-- ========== 结果弹窗 ========== -->
 <div class="modal" id="modal">
   <div class="modal-card">
     <div class="stars" id="result-stars"></div>
@@ -438,7 +410,6 @@
   </div>
 </div>
 
-<!-- ========== 云同步弹窗 ========== -->
 <div class="modal" id="sync-modal">
   <div class="modal-card">
     <h2>云同步</h2>
@@ -457,20 +428,15 @@
      1. 关卡数据
      ========================================================= */
 
-  // 三个难度：简单 5×5、中等 6×6、困难 7×7，每个难度各 100 关（合计 300 关）
   const SIZE_PLAN = [
     { name: '简单', size: 5, count: 100 },
     { name: '中等', size: 6, count: 100 },
     { name: '困难', size: 7, count: 100 }
   ];
 
-  // 各尺寸的目标用时（秒）—— 用于星级评定
   const TARGET_TIME = { 4: 12, 5: 22, 6: 32, 7: 44, 8: 58, 9: 74, 10: 92 };
-
-  // 自由练习可选尺寸
   const FREE_SIZES = [4, 5, 6, 7, 8, 9, 10];
 
-  // 生成关卡列表
   const LEVELS = (function () {
     const arr = [];
     let id = 0;
@@ -491,7 +457,6 @@
     return arr;
   })();
 
-  // 快速查表：关卡 id -> 关卡对象
   const LEVEL_MAP = (function () {
     const map = {};
     for (let i = 0; i < LEVELS.length; i++) map[LEVELS[i].id] = LEVELS[i];
@@ -518,8 +483,8 @@
   function saveProgress() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-    } catch (e) { /* 隐私模式等情况下忽略 */ }
-    scheduleSyncPush();   // 触发云同步（内部会判断是否已启用）
+    } catch (e) { /* 忽略 */ }
+    scheduleSyncPush();
   }
 
   /* =========================================================
@@ -690,7 +655,6 @@
   function startLevel(levelId) {
     const level = LEVEL_MAP[levelId];
     if (!level) return;
-
     startGame({
       mode: 'level',
       level: level,
@@ -745,7 +709,6 @@
   function renderBoard() {
     const n = game.size;
     const board = $('#board');
-
     board.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
     board.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
     board.innerHTML = '';
@@ -766,14 +729,12 @@
   function fitBoard() {
     const screen = $('#screen-game');
     if (!screen.classList.contains('active')) return;
-
     const wrap = document.querySelector('.board-wrap');
     const rect = wrap.getBoundingClientRect();
     if (rect.width < 20 || rect.height < 20) return;
 
     const board = $('#board');
     const n = game.size;
-
     const side = Math.min(rect.width, rect.height) - 6;
     const gap = n <= 6 ? 8 : (n <= 8 ? 6 : 4);
 
@@ -817,20 +778,14 @@
       cell.disabled = true;
       game.next++;
       $('#progress-num').textContent = (game.next - 1) + '/' + game.total;
-
       if (game.next > game.total) finishGame();
-
     } else {
       game.errors++;
       $('#err-num').textContent = game.errors;
-
       cell.classList.remove('wrong');
       void cell.offsetWidth;
       cell.classList.add('wrong');
-
-      window.setTimeout(function () {
-        cell.classList.remove('wrong');
-      }, 320);
+      window.setTimeout(function () { cell.classList.remove('wrong'); }, 320);
     }
   }
 
@@ -910,16 +865,14 @@
     $('#modal').classList.add('show');
   }
 
-  function hideModal() {
-    $('#modal').classList.remove('show');
-  }
+  function hideModal() { $('#modal').classList.remove('show'); }
 
   /* =========================================================
-     15. 云同步模块（jsonblob.com）
+     15. 云同步模块（npoint.io）
      ========================================================= */
 
   const SYNC = {
-    KEY: 'schulte_sync_v1',
+    KEY: 'schulte_sync_v3',
     config: null,
 
     load() {
@@ -938,29 +891,42 @@
     get enabled() { return !!this.blobId; },
 
     async create() {
-      const res = await fetch('https://jsonblob.com/api/jsonBlob', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(progress)
-      });
-      if (!res.ok) throw new Error('创建失败 (' + res.status + ')');
-      const loc = res.headers.get('Location') || res.headers.get('location');
-      if (!loc) throw new Error('无法获取同步码');
-      const id = loc.split('/').pop();
-      this.config = { blobId: id };
+      let res;
+      try {
+        res = await fetch('https://api.npoint.io/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(progress)
+        });
+      } catch (e) {
+        throw new Error('网络请求失败，请检查网络连接');
+      }
+      if (!res.ok) throw new Error('服务器拒绝创建 (' + res.status + ')');
+      let data;
+      try { data = await res.json(); }
+      catch (e) { throw new Error('服务器返回格式异常'); }
+      if (!data || !data.id) throw new Error('无法获取同步码');
+      this.config = { blobId: data.id };
       this.save();
-      return id;
+      return data.id;
     },
 
     async connect(id) {
       id = String(id).trim();
       if (!id) throw new Error('请输入同步码');
-      const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(id), {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-      if (!res.ok) throw new Error('同步码无效或已过期');
-      const data = await res.json();
+      let res;
+      try {
+        res = await fetch('https://api.npoint.io/' + encodeURIComponent(id), {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+      } catch (e) {
+        throw new Error('网络请求失败，请检查网络连接');
+      }
+      if (!res.ok) throw new Error('同步码无效或已失效');
+      let data;
+      try { data = await res.json(); }
+      catch (e) { throw new Error('服务器返回格式异常'); }
       this.config = { blobId: id };
       this.save();
       return data;
@@ -969,7 +935,7 @@
     async pull() {
       if (!this.blobId) return null;
       try {
-        const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(this.blobId), {
+        const res = await fetch('https://api.npoint.io/' + encodeURIComponent(this.blobId), {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
@@ -981,7 +947,7 @@
     async push(data) {
       if (!this.blobId) return false;
       try {
-        const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(this.blobId), {
+        const res = await fetch('https://api.npoint.io/' + encodeURIComponent(this.blobId), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -996,7 +962,6 @@
     }
   };
 
-  // 合并两份进度：星星多优先，星星相同取时间短
   function mergeProgress(local, remote) {
     const result = { best: {} };
     const a = (local && local.best) || {};
@@ -1013,17 +978,13 @@
     return result;
   }
 
-  // 防抖推送
   let syncTimer = 0;
   function scheduleSyncPush() {
     if (typeof SYNC === 'undefined' || !SYNC.enabled) return;
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(function () {
-      SYNC.push(progress);
-    }, 1500);
+    syncTimer = setTimeout(function () { SYNC.push(progress); }, 1500);
   }
 
-  // 从云端拉取并合并，然后推回
   async function doSyncPull() {
     if (!SYNC.enabled) return;
     const remote = await SYNC.pull();
@@ -1034,7 +995,6 @@
     }
   }
 
-  // 刷新当前可见界面
   function refreshCurrentScreen() {
     const active = document.querySelector('.screen.active');
     if (!active) return;
@@ -1079,6 +1039,7 @@
   function bindSyncInactiveEvents() {
     $('#btn-sync-create').addEventListener('click', async function () {
       this.disabled = true;
+      const old = this.textContent;
       this.textContent = '创建中...';
       try {
         await SYNC.create();
@@ -1086,7 +1047,7 @@
       } catch (e) {
         alert('创建失败：' + e.message);
         this.disabled = false;
-        this.textContent = '创建新同步码';
+        this.textContent = old;
       }
     });
 
@@ -1094,6 +1055,7 @@
       const id = $('#sync-input').value.trim();
       if (!id) { alert('请输入同步码'); return; }
       this.disabled = true;
+      const old = this.textContent;
       this.textContent = '连接中...';
       try {
         const remote = await SYNC.connect(id);
@@ -1105,7 +1067,7 @@
       } catch (e) {
         alert('连接失败：' + e.message);
         this.disabled = false;
-        this.textContent = '连接';
+        this.textContent = old;
       }
     });
   }
@@ -1132,6 +1094,7 @@
 
     $('#btn-sync-now').addEventListener('click', async function () {
       this.disabled = true;
+      const old = this.textContent;
       this.textContent = '同步中...';
       try {
         await doSyncPull();
@@ -1140,7 +1103,7 @@
       } catch (e) {
         alert('同步失败');
         this.disabled = false;
-        this.textContent = '立即同步';
+        this.textContent = old;
       }
     });
 
@@ -1171,11 +1134,8 @@
   document.querySelectorAll('[data-go]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = this.dataset.go;
-      if (target === 'back') {
-        showScreen(game.mode === 'level' ? 'levels' : 'free');
-      } else {
-        showScreen(target);
-      }
+      if (target === 'back') showScreen(game.mode === 'level' ? 'levels' : 'free');
+      else showScreen(target);
     });
   });
 
@@ -1234,9 +1194,7 @@
 
   SYNC.load();
   if (SYNC.enabled) {
-    doSyncPull().then(function () {
-      refreshCurrentScreen();
-    });
+    doSyncPull().then(function () { refreshCurrentScreen(); });
   }
 
 })();
