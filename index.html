@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e16">
+<title>舒尔特方格</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #0b0e16;
+    color: #e6eaf5;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .app {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(circle at 50% 0%, #1a2340 0%, #0b0e16 55%);
+  }
+
+  /* ---------- 通用 ---------- */
+  .screen {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .screen.active { display: flex; }
+
+  .btn {
+    padding: 14px 28px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    color: #e6eaf5;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.2s, border-color 0.2s;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.primary {
+    background: linear-gradient(135deg, #4f8cff, #7b5cff);
+    border-color: transparent;
+    box-shadow: 0 8px 24px rgba(79, 140, 255, 0.35);
+  }
+
+  .icon-btn {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
+    color: #cfd7ea;
+    font-size: 18px;
+    font-family: inherit;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.2s;
+  }
+  .icon-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.1); }
+
+  /* ---------- 主菜单 ---------- */
+  #screen-menu.active {
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .logo {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #ffffff, #7fa8ff 60%, #a97bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #7a86a6;
+    letter-spacing: 2px;
+    margin-bottom: 34px;
+  }
+  .menu-btns { display: flex; flex-direction: column; gap: 14px; width: min(280px, 80vw); }
+  .menu-stats {
+    margin-top: 36px;
+    font-size: 13px;
+    color: #6f7b99;
+    line-height: 2;
+  }
+  .menu-stats b { color: #9fb6e8; font-weight: 700; }
+
+  /* ---------- 页面头部 ---------- */
+  .page-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex: 0 0 auto;
+  }
+  .page-head h2 { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+  .page-head .spacer { flex: 1; }
+
+  /* ---------- 关卡选择 ---------- */
+  #level-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 24px;
+  }
+  .level-group { margin-bottom: 26px; }
+  .level-group h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    color: #7f8bab;
+    margin-bottom: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .group-progress { font-size: 12px; color: #5d6b8f; font-weight: 600; letter-spacing: 0; }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 8px;
+  }
+  .level-btn {
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.045);
+    color: #c8d2e8;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s, background 0.2s, border-color 0.2s;
+  }
+  .level-btn:active { transform: scale(0.93); }
+  .level-btn.s3 { border-color: rgba(255, 204, 77, 0.55); color: #ffd97a; background: rgba(255, 204, 77, 0.09); }
+  .level-btn.s2 { border-color: rgba(180, 200, 230, 0.38); color: #cfdcf5; background: rgba(180, 200, 230, 0.07); }
+  .level-btn.s1 { border-color: rgba(150, 170, 205, 0.2);  color: #9fb0cc; background: rgba(150, 170, 205, 0.05); }
+
+  /* ---------- 自由练习 ---------- */
+  .size-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 12px;
+    margin-top: 6px;
+  }
+  .size-btn {
+    padding: 22px 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
+    color: #e6eaf5;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: transform 0.12s, background 0.2s;
+  }
+  .size-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+  .size-btn .n { font-size: 22px; font-weight: 700; }
+  .size-btn .d { font-size: 11px; color: #8794b3; letter-spacing: 1px; }
+
+  /* ---------- 游戏界面 ---------- */
+  .game-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: 0 0 auto;
+  }
+  .game-title {
+    font-size: 15px;
+    color: #9aa6c4;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-align: center;
+    flex: 1;
+  }
+
+  .timer-row {
+    text-align: center;
+    padding: 10px 0 6px;
+    flex: 0 0 auto;
+  }
+  .timer {
+    display: inline-block;
+    font-size: clamp(32px, 9vw, 44px);
+    font-weight: 800;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, #ffffff, #8fb2ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .timer.frozen { background: linear-gradient(180deg, #ffd97a, #ff9f4d); -webkit-background-clip: text; background-clip: text; }
+
+  .board-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #board {
+    display: grid;
+    gap: 6px;
+    touch-action: manipulation;
+  }
+
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #242d49, #1a2035);
+    color: #e8ecf8;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: background 0.15s, color 0.15s, transform 0.08s, box-shadow 0.15s;
+  }
+  .cell:active { transform: scale(0.93); }
+  .cell.done {
+    background: rgba(79, 140, 255, 0.10);
+    color: rgba(140, 170, 255, 0.30);
+    box-shadow: none;
+    cursor: default;
+    transform: none;
+  }
+  .cell.wrong {
+    animation: shake 0.3s;
+    background: rgba(255, 77, 109, 0.45);
+    color: #ffffff;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    60% { transform: translateX(5px); }
+    80% { transform: translateX(-2px); }
+  }
+
+  .game-bottom {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 12px 0 2px;
+    font-size: 13px;
+    color: #8b97b5;
+    flex: 0 0 auto;
+  }
+  .game-bottom b {
+    color: #e6eaf5;
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- 结果弹窗 ---------- */
+  .modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(5, 8, 16, 0.78);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+  }
+  .modal.show { display: flex; }
+  .modal-card {
+    width: min(100%, 360px);
+    padding: 26px 22px 22px;
+    text-align: center;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, #1c2440, #141a2e);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    animation: pop 0.26s cubic-bezier(0.2, 1.2, 0.4, 1);
+  }
+  @keyframes pop {
+    from { transform: scale(0.88); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+  .stars {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 42px;
+    line-height: 1;
+  }
+  .star { color: rgba(255, 255, 255, 0.12); transition: color 0.25s, text-shadow 0.25s; }
+  .star.on { color: #ffcc4d; text-shadow: 0 0 20px rgba(255, 204, 77, 0.6); }
+
+  .modal-card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+  .result-time {
+    font-size: 46px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #7fa8ff;
+    line-height: 1.15;
+  }
+  .result-time span { font-size: 20px; color: #5d6b8f; margin-left: 4px; font-weight: 600; }
+  .result-detail { font-size: 13px; color: #8794b3; margin: 4px 0 20px; line-height: 1.7; }
+  .result-detail .rec { color: #ffd97a; font-weight: 700; }
+  .modal-btns { display: flex; flex-direction: column; gap: 10px; }
+  .modal-btns .btn { width: 100%; padding: 13px; font-size: 16px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ========== 主菜单 ========== -->
+  <section class="screen active" id="screen-menu">
+    <div class="logo">舒尔特方格</div>
+    <div class="subtitle">专注 · 视觉搜索 · 反应力</div>
+    <div class="menu-btns">
+      <button class="btn primary" id="btn-levels">闯 关 模 式</button>
+      <button class="btn" id="btn-free">自 由 练 习</button>
+    </div>
+    <div class="menu-stats" id="menu-stats"></div>
+  </section>
+
+  <!-- ========== 关卡选择 ========== -->
+  <section class="screen" id="screen-levels">
+    <div class="page-head">
+      <button class="icon-btn" data-go="menu">←</button>
+      <h2>选择关卡</h2>
+      <div class="spacer"></div>
+    </div>
+    <div id="level-list"></div>
+  </section>
+
+  <!-- ========== 自由练习 ========== -->
+  <section class="screen" id="screen-free">
+    <div class="page-head">
+      <button class="icon-btn" data-go="menu">←</button>
+      <h2>自由练习</h2>
+      <div class="spacer"></div>
+    </div>
+    <div style="font-size:13px;color:#7a86a6;margin-bottom:14px;line-height:1.7;">
+      选择方格尺寸，随机生成一局，不计入关卡进度。
+    </div>
+    <div class="size-grid" id="size-list"></div>
+  </section>
+
+  <!-- ========== 游戏 ========== -->
+  <section class="screen" id="screen-game">
+    <div class="game-top">
+      <button class="icon-btn" data-go="back">✕</button>
+      <div class="game-title" id="game-title">第 1 关</div>
+      <button class="icon-btn" id="btn-restart">↻</button>
+    </div>
+
+    <div class="timer-row">
+      <div class="timer" id="timer">0.0</div>
+    </div>
+
+    <div class="board-wrap">
+      <div id="board"></div>
+    </div>
+
+    <div class="game-bottom">
+      <span>进度 <b id="progress-num">0/25</b></span>
+      <span>错误 <b id="err-num">0</b></span>
+    </div>
+  </section>
+
+</div>
+
+<!-- ========== 结果弹窗 ========== -->
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <div class="stars" id="result-stars"></div>
+    <h2 id="result-title">完成！</h2>
+    <div class="result-time"><span id="result-time">0.00</span><span>秒</span></div>
+    <div class="result-detail" id="result-detail"></div>
+    <div class="modal-btns">
+      <button class="btn primary" id="btn-next">下 一 关</button>
+      <button class="btn" id="btn-again">再 来 一 次</button>
+      <button class="btn" id="btn-modal-menu">返 回 主 菜 单</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     1. 关卡数据
+     ========================================================= */
+
+  // 三个难度：简单 5×5、中等 6×6、困难 7×7，每个难度各 100 关（合计 300 关）
+  const SIZE_PLAN = [
+    { name: '简单', size: 5, count: 100 },
+    { name: '中等', size: 6, count: 100 },
+    { name: '困难', size: 7, count: 100 }
+  ];
+
+  // 各尺寸的目标用时（秒）—— 用于星级评定
+  const TARGET_TIME = { 4: 12, 5: 22, 6: 32, 7: 44, 8: 58, 9: 74, 10: 92 };
+
+  // 自由练习可选尺寸
+  const FREE_SIZES = [4, 5, 6, 7, 8, 9, 10];
+
+  // 生成关卡列表
+  const LEVELS = (function () {
+    const arr = [];
+    let id = 0;
+    for (let g = 0; g < SIZE_PLAN.length; g++) {
+      const plan = SIZE_PLAN[g];
+      for (let i = 0; i < plan.count; i++) {
+        id++;
+        arr.push({
+          id: id,                  // 全局唯一关卡编号
+          group: g,                // 难度序号
+          groupName: plan.name,    // 难度名称
+          localIndex: i + 1,       // 该难度内的序号（1 ~ 100）
+          size: plan.size,
+          target: TARGET_TIME[plan.size]
+        });
+      }
+    }
+    return arr;
+  })();
+
+  // 快速查表：关卡 id -> 关卡对象
+  const LEVEL_MAP = (function () {
+    const map = {};
+    for (let i = 0; i < LEVELS.length; i++) map[LEVELS[i].id] = LEVELS[i];
+    return map;
+  })();
+
+  /* =========================================================
+     2. 进度存储
+     ========================================================= */
+
+  const STORAGE_KEY = 'schulte_grid_v2';
+
+  let progress = (function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const obj = JSON.parse(raw);
+        if (obj && typeof obj === 'object' && obj.best) return obj;
+      }
+    } catch (e) { /* 忽略 */ }
+    return { best: {} };   // best[levelId] = { time, stars }
+  })();
+
+  function saveProgress() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    } catch (e) { /* 隐私模式等情况下忽略 */ }
+  }
+
+  /* =========================================================
+     3. 工具函数
+     ========================================================= */
+
+  function $(sel) { return document.querySelector(sel); }
+
+  // 可复现的伪随机数生成器
+  function mulberry32(a) {
+    return function () {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // 生成打乱后的数字数组
+  function buildNumbers(size, seed) {
+    const total = size * size;
+    const arr = new Array(total);
+    for (let i = 0; i < total; i++) arr[i] = i + 1;
+    const rand = mulberry32(seed >>> 0);
+    for (let i = total - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  /* =========================================================
+     4. 游戏状态
+     ========================================================= */
+
+  const game = {
+    mode: 'level',   // 'level' | 'free'
+    level: null,
+    size: 5,
+    numbers: [],
+    next: 1,
+    total: 25,
+    errors: 0,
+    running: false,
+    finished: false,
+    startTs: 0,
+    elapsed: 0,
+    raf: 0,
+    seed: 0
+  };
+
+  /* =========================================================
+     5. 界面切换
+     ========================================================= */
+
+  function showScreen(name) {
+    const screens = document.querySelectorAll('.screen');
+    for (let i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+    const el = document.getElementById('screen-' + name);
+    if (el) el.classList.add('active');
+
+    if (name === 'menu') updateMenuStats();
+    if (name === 'levels') renderLevelSelect();
+    if (name === 'game') {
+      requestAnimationFrame(function () { requestAnimationFrame(fitBoard); });
+    }
+  }
+
+  /* =========================================================
+     6. 主菜单统计
+     ========================================================= */
+
+  function updateMenuStats() {
+    const keys = Object.keys(progress.best);
+    let stars = 0;
+    for (let i = 0; i < keys.length; i++) stars += progress.best[keys[i]].stars || 0;
+
+    // 各难度完成数
+    const doneByGroup = [0, 0, 0];
+    for (let i = 0; i < keys.length; i++) {
+      const lv = LEVEL_MAP[keys[i]];
+      if (lv) doneByGroup[lv.group]++;
+    }
+
+    let lines = '';
+    for (let g = 0; g < SIZE_PLAN.length; g++) {
+      lines += SIZE_PLAN[g].name + ' ' + doneByGroup[g] + '/' + SIZE_PLAN[g].count + '　';
+    }
+
+    $('#menu-stats').innerHTML =
+      lines + '<br>' +
+      '已通关 <b>' + keys.length + '</b> / ' + LEVELS.length +
+      ' &nbsp;·&nbsp; 获得 <b>' + stars + '</b> ★';
+  }
+
+  /* =========================================================
+     7. 关卡选择界面
+     ========================================================= */
+
+  function renderLevelSelect() {
+    const list = $('#level-list');
+    list.innerHTML = '';
+
+    // 按难度分组渲染
+    for (let g = 0; g < SIZE_PLAN.length; g++) {
+      const plan = SIZE_PLAN[g];
+      const groupLevels = LEVELS.filter(function (lv) { return lv.group === g; });
+
+      let done = 0;
+      for (let i = 0; i < groupLevels.length; i++) {
+        if (progress.best[String(groupLevels[i].id)]) done++;
+      }
+
+      const group = document.createElement('div');
+      group.className = 'level-group';
+
+      const title = document.createElement('h3');
+      title.innerHTML =
+        '<span>' + plan.name + ' · ' + plan.size + ' × ' + plan.size +
+        ' · 目标 ' + TARGET_TIME[plan.size] + 's</span>' +
+        '<span class="group-progress">' + done + '/' + plan.count + '</span>';
+      group.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.className = 'level-grid';
+
+      const frag = document.createDocumentFragment();
+      for (let i = 0; i < groupLevels.length; i++) {
+        const level = groupLevels[i];
+        const btn = document.createElement('button');
+        btn.className = 'level-btn';
+        btn.textContent = level.localIndex;
+        btn.dataset.id = level.id;
+        btn.title = plan.name + ' 第 ' + level.localIndex + ' 关';
+
+        const best = progress.best[String(level.id)];
+        if (best) btn.classList.add('s' + best.stars);
+
+        frag.appendChild(btn);
+      }
+      grid.appendChild(frag);
+      group.appendChild(grid);
+      list.appendChild(group);
+    }
+  }
+
+  /* =========================================================
+     8. 自由练习界面
+     ========================================================= */
+
+  function renderFreeSelect() {
+    const wrap = $('#size-list');
+    wrap.innerHTML = '';
+    for (let i = 0; i < FREE_SIZES.length; i++) {
+      const n = FREE_SIZES[i];
+      const btn = document.createElement('button');
+      btn.className = 'size-btn';
+      btn.innerHTML = '<span class="n">' + n + '×' + n + '</span>' +
+                      '<span class="d">' + (n * n) + ' 个数字</span>';
+      btn.addEventListener('click', (function (size) {
+        return function () { startFree(size); };
+      })(n));
+      wrap.appendChild(btn);
+    }
+  }
+
+  /* =========================================================
+     9. 开始游戏
+     ========================================================= */
+
+  function startLevel(levelId) {
+    const level = LEVEL_MAP[levelId];
+    if (!level) return;
+
+    startGame({
+      mode: 'level',
+      level: level,
+      size: level.size,
+      // 同一关固定种子 → 布局稳定
+      seed: level.id * 7919 + 13
+    });
+  }
+
+  function startFree(size) {
+    startGame({
+      mode: 'free',
+      level: null,
+      size: size,
+      // 随机种子 → 每次布局不同
+      seed: Math.floor(Math.random() * 0x7fffffff)
+    });
+  }
+
+  function startGame(cfg) {
+    // 重置状态
+    game.mode = cfg.mode;
+    game.level = cfg.level;
+    game.size = cfg.size;
+    game.seed = cfg.seed;
+    game.numbers = buildNumbers(cfg.size, cfg.seed);
+    game.total = cfg.size * cfg.size;
+    game.next = 1;
+    game.errors = 0;
+    game.running = false;
+    game.finished = false;
+    game.elapsed = 0;
+    cancelAnimationFrame(game.raf);
+
+    // 更新界面
+    if (cfg.mode === 'level') {
+      $('#game-title').textContent =
+        cfg.level.groupName + ' · 第 ' + cfg.level.localIndex + ' 关 · ' +
+        cfg.size + '×' + cfg.size;
+    } else {
+      $('#game-title').textContent = '自由练习 · ' + cfg.size + '×' + cfg.size;
+    }
+    $('#timer').textContent = '0.0';
+    $('#timer').classList.remove('frozen');
+    $('#progress-num').textContent = '0/' + game.total;
+    $('#err-num').textContent = '0';
+
+    renderBoard();
+    showScreen('game');
+  }
+
+  /* =========================================================
+     10. 渲染棋盘
+     ========================================================= */
+
+  function renderBoard() {
+    const n = game.size;
+    const board = $('#board');
+
+    board.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+    board.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
+    board.innerHTML = '';
+
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < game.numbers.length; i++) {
+      const v = game.numbers[i];
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell';
+      cell.textContent = v;
+      cell.dataset.v = v;
+      frag.appendChild(cell);
+    }
+    board.appendChild(frag);
+  }
+
+  // 根据可用空间计算棋盘尺寸 / 字号
+  function fitBoard() {
+    const screen = $('#screen-game');
+    if (!screen.classList.contains('active')) return;
+
+    const wrap = document.querySelector('.board-wrap');
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return;
+
+    const board = $('#board');
+    const n = game.size;
+
+    const side = Math.min(rect.width, rect.height) - 6;
+    const gap = n <= 6 ? 8 : (n <= 8 ? 6 : 4);
+
+    board.style.width = side + 'px';
+    board.style.height = side + 'px';
+    board.style.gap = gap + 'px';
+
+    const cellSize = (side - gap * (n - 1)) / n;
+    board.style.fontSize = Math.max(9, cellSize * 0.42) + 'px';
+  }
+
+  /* =========================================================
+     11. 计时
+     ========================================================= */
+
+  function tick() {
+    if (!game.running) return;
+    game.elapsed = (performance.now() - game.startTs) / 1000;
+    $('#timer').textContent = game.elapsed.toFixed(1);
+    game.raf = requestAnimationFrame(tick);
+  }
+
+  /* =========================================================
+     12. 点击逻辑
+     ========================================================= */
+
+  function handleCell(cell) {
+    if (game.finished) return;
+    if (cell.classList.contains('done')) return;
+
+    // 第一次点击时启动计时
+    if (!game.running) {
+      game.running = true;
+      game.startTs = performance.now();
+      game.raf = requestAnimationFrame(tick);
+    }
+
+    const v = Number(cell.dataset.v);
+
+    if (v === game.next) {
+      cell.classList.add('done');
+      cell.disabled = true;
+      game.next++;
+      $('#progress-num').textContent = (game.next - 1) + '/' + game.total;
+
+      if (game.next > game.total) finishGame();
+
+    } else {
+      game.errors++;
+      $('#err-num').textContent = game.errors;
+
+      cell.classList.remove('wrong');
+      // 强制重绘以重启动画
+      void cell.offsetWidth;
+      cell.classList.add('wrong');
+
+      window.setTimeout(function () {
+        cell.classList.remove('wrong');
+      }, 320);
+    }
+  }
+
+  /* =========================================================
+     13. 完成一局
+     ========================================================= */
+
+  function finishGame() {
+    game.finished = true;
+    game.running = false;
+    cancelAnimationFrame(game.raf);
+
+    const time = (performance.now() - game.startTs) / 1000;
+    game.elapsed = time;
+    $('#timer').textContent = time.toFixed(1);
+    $('#timer').classList.add('frozen');
+    $('#progress-num').textContent = game.total + '/' + game.total;
+
+    const target = game.mode === 'level'
+      ? game.level.target
+      : (TARGET_TIME[game.size] || game.size * game.size * 1.2);
+
+    // 星级：≤75% 目标 = 3星；≤100% = 2星；否则 1星
+    let stars = 1;
+    if (time <= target * 0.75) stars = 3;
+    else if (time <= target) stars = 2;
+
+    // 记录进度
+    let isRecord = false;
+    if (game.mode === 'level') {
+      const key = String(game.level.id);
+      const prev = progress.best[key];
+      if (!prev) {
+        progress.best[key] = { time: Math.round(time * 100) / 100, stars: stars };
+        isRecord = true;
+      } else {
+        if (time < prev.time) {
+          prev.time = Math.round(time * 100) / 100;
+          isRecord = true;
+        }
+        if (stars > prev.stars) prev.stars = stars;
+      }
+      saveProgress();
+    }
+
+    showResult(time, target, stars, isRecord);
+  }
+
+  /* =========================================================
+     14. 结果弹窗
+     ========================================================= */
+
+  function showResult(time, target, stars, isRecord) {
+    const starBox = $('#result-stars');
+    starBox.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const s = document.createElement('span');
+      s.className = 'star' + (i < stars ? ' on' : '');
+      s.textContent = '★';
+      starBox.appendChild(s);
+    }
+
+    const titles = { 3: '太厉害了！', 2: '不错！', 1: '完成！' };
+    $('#result-title').textContent = titles[stars];
+    $('#result-time').textContent = time.toFixed(2);
+
+    let detail = '目标 ' + target + ' 秒 · 错误 ' + game.errors + ' 次';
+    if (isRecord) detail += '<br><span class="rec">🎉 新纪录！</span>';
+    $('#result-detail').innerHTML = detail;
+
+    // 最后一关（困难 第100关）没有下一关
+    const hasNext = game.mode === 'level' && game.level.id < LEVELS.length;
+    $('#btn-next').style.display = hasNext ? '' : 'none';
+    if (hasNext) {
+      const nextLv = LEVEL_MAP[game.level.id + 1];
+      $('#btn-next').textContent = '下 一 关（' + nextLv.groupName +
+        ' 第 ' + nextLv.localIndex + ' 关）';
+    }
+
+    $('#modal').classList.add('show');
+  }
+
+  function hideModal() {
+    $('#modal').classList.remove('show');
+  }
+
+  /* =========================================================
+     15. 事件绑定
+     ========================================================= */
+
+  // --- 主菜单 ---
+  $('#btn-levels').addEventListener('click', function () { showScreen('levels'); });
+  $('#btn-free').addEventListener('click', function () { showScreen('free'); });
+
+  // --- 返回按钮（通用）---
+  document.querySelectorAll('[data-go]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const target = this.dataset.go;
+      if (target === 'back') {
+        // 从游戏中返回：回到来源界面
+        showScreen(game.mode === 'level' ? 'levels' : 'free');
+      } else {
+        showScreen(target);
+      }
+    });
+  });
+
+  // --- 关卡按钮事件委托 ---
+  $('#level-list').addEventListener('click', function (e) {
+    const btn = e.target.closest('.level-btn');
+    if (btn) startLevel(Number(btn.dataset.id));
+  });
+
+  // --- 棋盘事件委托 ---
+  $('#board').addEventListener('click', function (e) {
+    const cell = e.target.closest('.cell');
+    if (cell) handleCell(cell);
+  });
+
+  // --- 重开本局 ---
+  $('#btn-restart').addEventListener('click', function () {
+    hideModal();
+    if (game.mode === 'level') startLevel(game.level.id);
+    else startFree(game.size);
+  });
+
+  // --- 结果弹窗按钮 ---
+  $('#btn-again').addEventListener('click', function () {
+    hideModal();
+    if (game.mode === 'level') startLevel(game.level.id);
+    else startFree(game.size);
+  });
+
+  $('#btn-next').addEventListener('click', function () {
+    hideModal();
+    if (game.mode === 'level' && game.level.id < LEVELS.length) {
+      startLevel(game.level.id + 1);
+    }
+  });
+
+  $('#btn-modal-menu').addEventListener('click', function () {
+    hideModal();
+    showScreen('menu');
+  });
+
+  // --- 窗口尺寸变化时重算棋盘 ---
+  const boardWrap = document.querySelector('.board-wrap');
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(function () { fitBoard(); });
+    ro.observe(boardWrap);
+  } else {
+    window.addEventListener('resize', fitBoard);
+    window.addEventListener('orientationchange', function () {
+      window.setTimeout(fitBoard, 200);
+    });
+  }
+
+  /* =========================================================
+     16. 初始化
+     ========================================================= */
+
+  renderFreeSelect();
+  updateMenuStats();
+  showScreen('menu');
+
+})();
+</script>
+</body>
+</html>
