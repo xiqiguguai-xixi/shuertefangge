@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0b0e16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>舒尔特方格</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -341,6 +343,21 @@
   .result-detail .rec { color: #ffd97a; font-weight: 700; }
   .modal-btns { display: flex; flex-direction: column; gap: 10px; }
   .modal-btns .btn { width: 100%; padding: 13px; font-size: 16px; }
+
+  /* ---------- 云同步 ---------- */
+  .sync-code {
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(79, 140, 255, 0.12);
+    border: 1px solid rgba(79, 140, 255, 0.3);
+    color: #9fc0ff;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+    word-break: break-all;
+    line-height: 1.5;
+    user-select: all;
+    -webkit-user-select: all;
+  }
 </style>
 </head>
 <body>
@@ -354,6 +371,7 @@
     <div class="menu-btns">
       <button class="btn primary" id="btn-levels">闯 关 模 式</button>
       <button class="btn" id="btn-free">自 由 练 习</button>
+      <button class="btn" id="btn-sync">云 同 步</button>
     </div>
     <div class="menu-stats" id="menu-stats"></div>
   </section>
@@ -420,6 +438,17 @@
   </div>
 </div>
 
+<!-- ========== 云同步弹窗 ========== -->
+<div class="modal" id="sync-modal">
+  <div class="modal-card">
+    <h2>云同步</h2>
+    <div id="sync-content" style="margin: 14px 0;"></div>
+    <div class="modal-btns">
+      <button class="btn" id="btn-sync-close">关 闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   'use strict';
@@ -450,10 +479,10 @@
       for (let i = 0; i < plan.count; i++) {
         id++;
         arr.push({
-          id: id,                  // 全局唯一关卡编号
-          group: g,                // 难度序号
-          groupName: plan.name,    // 难度名称
-          localIndex: i + 1,       // 该难度内的序号（1 ~ 100）
+          id: id,
+          group: g,
+          groupName: plan.name,
+          localIndex: i + 1,
           size: plan.size,
           target: TARGET_TIME[plan.size]
         });
@@ -483,13 +512,14 @@
         if (obj && typeof obj === 'object' && obj.best) return obj;
       }
     } catch (e) { /* 忽略 */ }
-    return { best: {} };   // best[levelId] = { time, stars }
+    return { best: {} };
   })();
 
   function saveProgress() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     } catch (e) { /* 隐私模式等情况下忽略 */ }
+    scheduleSyncPush();   // 触发云同步（内部会判断是否已启用）
   }
 
   /* =========================================================
@@ -498,7 +528,6 @@
 
   function $(sel) { return document.querySelector(sel); }
 
-  // 可复现的伪随机数生成器
   function mulberry32(a) {
     return function () {
       a |= 0;
@@ -509,7 +538,6 @@
     };
   }
 
-  // 生成打乱后的数字数组
   function buildNumbers(size, seed) {
     const total = size * size;
     const arr = new Array(total);
@@ -527,7 +555,7 @@
      ========================================================= */
 
   const game = {
-    mode: 'level',   // 'level' | 'free'
+    mode: 'level',
     level: null,
     size: 5,
     numbers: [],
@@ -568,7 +596,6 @@
     let stars = 0;
     for (let i = 0; i < keys.length; i++) stars += progress.best[keys[i]].stars || 0;
 
-    // 各难度完成数
     const doneByGroup = [0, 0, 0];
     for (let i = 0; i < keys.length; i++) {
       const lv = LEVEL_MAP[keys[i]];
@@ -594,7 +621,6 @@
     const list = $('#level-list');
     list.innerHTML = '';
 
-    // 按难度分组渲染
     for (let g = 0; g < SIZE_PLAN.length; g++) {
       const plan = SIZE_PLAN[g];
       const groupLevels = LEVELS.filter(function (lv) { return lv.group === g; });
@@ -669,7 +695,6 @@
       mode: 'level',
       level: level,
       size: level.size,
-      // 同一关固定种子 → 布局稳定
       seed: level.id * 7919 + 13
     });
   }
@@ -679,13 +704,11 @@
       mode: 'free',
       level: null,
       size: size,
-      // 随机种子 → 每次布局不同
       seed: Math.floor(Math.random() * 0x7fffffff)
     });
   }
 
   function startGame(cfg) {
-    // 重置状态
     game.mode = cfg.mode;
     game.level = cfg.level;
     game.size = cfg.size;
@@ -699,7 +722,6 @@
     game.elapsed = 0;
     cancelAnimationFrame(game.raf);
 
-    // 更新界面
     if (cfg.mode === 'level') {
       $('#game-title').textContent =
         cfg.level.groupName + ' · 第 ' + cfg.level.localIndex + ' 关 · ' +
@@ -741,7 +763,6 @@
     board.appendChild(frag);
   }
 
-  // 根据可用空间计算棋盘尺寸 / 字号
   function fitBoard() {
     const screen = $('#screen-game');
     if (!screen.classList.contains('active')) return;
@@ -783,7 +804,6 @@
     if (game.finished) return;
     if (cell.classList.contains('done')) return;
 
-    // 第一次点击时启动计时
     if (!game.running) {
       game.running = true;
       game.startTs = performance.now();
@@ -805,7 +825,6 @@
       $('#err-num').textContent = game.errors;
 
       cell.classList.remove('wrong');
-      // 强制重绘以重启动画
       void cell.offsetWidth;
       cell.classList.add('wrong');
 
@@ -834,12 +853,10 @@
       ? game.level.target
       : (TARGET_TIME[game.size] || game.size * game.size * 1.2);
 
-    // 星级：≤75% 目标 = 3星；≤100% = 2星；否则 1星
     let stars = 1;
     if (time <= target * 0.75) stars = 3;
     else if (time <= target) stars = 2;
 
-    // 记录进度
     let isRecord = false;
     if (game.mode === 'level') {
       const key = String(game.level.id);
@@ -882,7 +899,6 @@
     if (isRecord) detail += '<br><span class="rec">🎉 新纪录！</span>';
     $('#result-detail').innerHTML = detail;
 
-    // 最后一关（困难 第100关）没有下一关
     const hasNext = game.mode === 'level' && game.level.id < LEVELS.length;
     $('#btn-next').style.display = hasNext ? '' : 'none';
     if (hasNext) {
@@ -899,19 +915,263 @@
   }
 
   /* =========================================================
-     15. 事件绑定
+     15. 云同步模块（jsonblob.com）
      ========================================================= */
 
-  // --- 主菜单 ---
+  const SYNC = {
+    KEY: 'schulte_sync_v1',
+    config: null,
+
+    load() {
+      try {
+        const raw = localStorage.getItem(this.KEY);
+        if (raw) this.config = JSON.parse(raw);
+      } catch (e) { this.config = null; }
+    },
+
+    save() {
+      if (this.config) localStorage.setItem(this.KEY, JSON.stringify(this.config));
+      else localStorage.removeItem(this.KEY);
+    },
+
+    get blobId() { return this.config ? this.config.blobId : null; },
+    get enabled() { return !!this.blobId; },
+
+    async create() {
+      const res = await fetch('https://jsonblob.com/api/jsonBlob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(progress)
+      });
+      if (!res.ok) throw new Error('创建失败 (' + res.status + ')');
+      const loc = res.headers.get('Location') || res.headers.get('location');
+      if (!loc) throw new Error('无法获取同步码');
+      const id = loc.split('/').pop();
+      this.config = { blobId: id };
+      this.save();
+      return id;
+    },
+
+    async connect(id) {
+      id = String(id).trim();
+      if (!id) throw new Error('请输入同步码');
+      const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(id), {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) throw new Error('同步码无效或已过期');
+      const data = await res.json();
+      this.config = { blobId: id };
+      this.save();
+      return data;
+    },
+
+    async pull() {
+      if (!this.blobId) return null;
+      try {
+        const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(this.blobId), {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (e) { return null; }
+    },
+
+    async push(data) {
+      if (!this.blobId) return false;
+      try {
+        const res = await fetch('https://jsonblob.com/api/jsonBlob/' + encodeURIComponent(this.blobId), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        return res.ok;
+      } catch (e) { return false; }
+    },
+
+    disconnect() {
+      this.config = null;
+      this.save();
+    }
+  };
+
+  // 合并两份进度：星星多优先，星星相同取时间短
+  function mergeProgress(local, remote) {
+    const result = { best: {} };
+    const a = (local && local.best) || {};
+    const b = (remote && remote.best) || {};
+    const keys = new Set(Object.keys(a).concat(Object.keys(b)));
+    keys.forEach(function (key) {
+      const x = a[key], y = b[key];
+      if (!x) { result.best[key] = y; return; }
+      if (!y) { result.best[key] = x; return; }
+      if (x.stars > y.stars) result.best[key] = x;
+      else if (y.stars > x.stars) result.best[key] = y;
+      else result.best[key] = (x.time < y.time) ? x : y;
+    });
+    return result;
+  }
+
+  // 防抖推送
+  let syncTimer = 0;
+  function scheduleSyncPush() {
+    if (typeof SYNC === 'undefined' || !SYNC.enabled) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () {
+      SYNC.push(progress);
+    }, 1500);
+  }
+
+  // 从云端拉取并合并，然后推回
+  async function doSyncPull() {
+    if (!SYNC.enabled) return;
+    const remote = await SYNC.pull();
+    if (remote) {
+      progress = mergeProgress(progress, remote);
+      saveProgress();
+      await SYNC.push(progress);
+    }
+  }
+
+  // 刷新当前可见界面
+  function refreshCurrentScreen() {
+    const active = document.querySelector('.screen.active');
+    if (!active) return;
+    if (active.id === 'screen-menu') updateMenuStats();
+    if (active.id === 'screen-levels') renderLevelSelect();
+  }
+
+  /* =========================================================
+     16. 云同步 UI
+     ========================================================= */
+
+  function renderSyncUI() {
+    const box = $('#sync-content');
+
+    if (SYNC.enabled) {
+      box.innerHTML =
+        '<div style="font-size:13px;color:#8b97b5;margin-bottom:10px;line-height:1.7;">' +
+        '同步码（在另一台设备输入此码即可同步）：</div>' +
+        '<div class="sync-code" id="sync-code">' + SYNC.blobId + '</div>' +
+        '<div style="display:flex;gap:8px;margin:14px 0;">' +
+        '  <button class="btn" id="btn-sync-copy" style="flex:1;padding:10px;font-size:14px;">复制</button>' +
+        '  <button class="btn" id="btn-sync-now" style="flex:1;padding:10px;font-size:14px;">立即同步</button>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#5d6b8f;margin-bottom:14px;line-height:1.6;">' +
+        '每完成一关会自动同步。同步码请妥善保管，知道它的人都能读写你的进度。' +
+        '</div>' +
+        '<button class="btn" id="btn-sync-disconnect" style="width:100%;padding:10px;font-size:14px;color:#ff8a9a;">断开同步</button>';
+      bindSyncActiveEvents();
+    } else {
+      box.innerHTML =
+        '<div style="font-size:13px;color:#8b97b5;margin-bottom:10px;line-height:1.7;">' +
+        '创建同步码后，在另一台设备输入同一个同步码，即可共享进度。' +
+        '</div>' +
+        '<button class="btn primary" id="btn-sync-create" style="width:100%;padding:12px;font-size:15px;margin-bottom:16px;">创建新同步码</button>' +
+        '<div style="font-size:13px;color:#8b97b5;margin-bottom:8px;">或输入已有同步码：</div>' +
+        '<input id="sync-input" type="text" placeholder="粘贴同步码" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#e6eaf5;font-family:inherit;font-size:14px;margin-bottom:10px;outline:none;">' +
+        '<button class="btn" id="btn-sync-connect" style="width:100%;padding:12px;font-size:15px;">连接</button>';
+      bindSyncInactiveEvents();
+    }
+  }
+
+  function bindSyncInactiveEvents() {
+    $('#btn-sync-create').addEventListener('click', async function () {
+      this.disabled = true;
+      this.textContent = '创建中...';
+      try {
+        await SYNC.create();
+        renderSyncUI();
+      } catch (e) {
+        alert('创建失败：' + e.message);
+        this.disabled = false;
+        this.textContent = '创建新同步码';
+      }
+    });
+
+    $('#btn-sync-connect').addEventListener('click', async function () {
+      const id = $('#sync-input').value.trim();
+      if (!id) { alert('请输入同步码'); return; }
+      this.disabled = true;
+      this.textContent = '连接中...';
+      try {
+        const remote = await SYNC.connect(id);
+        progress = mergeProgress(progress, remote);
+        saveProgress();
+        await SYNC.push(progress);
+        renderSyncUI();
+        refreshCurrentScreen();
+      } catch (e) {
+        alert('连接失败：' + e.message);
+        this.disabled = false;
+        this.textContent = '连接';
+      }
+    });
+  }
+
+  function bindSyncActiveEvents() {
+    $('#btn-sync-copy').addEventListener('click', function () {
+      const code = SYNC.blobId;
+      const done = function () {
+        $('#btn-sync-copy').textContent = '已复制';
+        setTimeout(function () { $('#btn-sync-copy').textContent = '复制'; }, 1500);
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(done).catch(done);
+      } else {
+        const input = document.createElement('input');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        done();
+      }
+    });
+
+    $('#btn-sync-now').addEventListener('click', async function () {
+      this.disabled = true;
+      this.textContent = '同步中...';
+      try {
+        await doSyncPull();
+        renderSyncUI();
+        refreshCurrentScreen();
+      } catch (e) {
+        alert('同步失败');
+        this.disabled = false;
+        this.textContent = '立即同步';
+      }
+    });
+
+    $('#btn-sync-disconnect').addEventListener('click', function () {
+      if (confirm('断开同步后，本设备进度不会删除，但不会再与云端同步。确定吗？')) {
+        SYNC.disconnect();
+        renderSyncUI();
+      }
+    });
+  }
+
+  $('#btn-sync').addEventListener('click', function () {
+    renderSyncUI();
+    $('#sync-modal').classList.add('show');
+  });
+
+  $('#btn-sync-close').addEventListener('click', function () {
+    $('#sync-modal').classList.remove('show');
+  });
+
+  /* =========================================================
+     17. 事件绑定
+     ========================================================= */
+
   $('#btn-levels').addEventListener('click', function () { showScreen('levels'); });
   $('#btn-free').addEventListener('click', function () { showScreen('free'); });
 
-  // --- 返回按钮（通用）---
   document.querySelectorAll('[data-go]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = this.dataset.go;
       if (target === 'back') {
-        // 从游戏中返回：回到来源界面
         showScreen(game.mode === 'level' ? 'levels' : 'free');
       } else {
         showScreen(target);
@@ -919,26 +1179,22 @@
     });
   });
 
-  // --- 关卡按钮事件委托 ---
   $('#level-list').addEventListener('click', function (e) {
     const btn = e.target.closest('.level-btn');
     if (btn) startLevel(Number(btn.dataset.id));
   });
 
-  // --- 棋盘事件委托 ---
   $('#board').addEventListener('click', function (e) {
     const cell = e.target.closest('.cell');
     if (cell) handleCell(cell);
   });
 
-  // --- 重开本局 ---
   $('#btn-restart').addEventListener('click', function () {
     hideModal();
     if (game.mode === 'level') startLevel(game.level.id);
     else startFree(game.size);
   });
 
-  // --- 结果弹窗按钮 ---
   $('#btn-again').addEventListener('click', function () {
     hideModal();
     if (game.mode === 'level') startLevel(game.level.id);
@@ -957,7 +1213,6 @@
     showScreen('menu');
   });
 
-  // --- 窗口尺寸变化时重算棋盘 ---
   const boardWrap = document.querySelector('.board-wrap');
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(function () { fitBoard(); });
@@ -970,12 +1225,19 @@
   }
 
   /* =========================================================
-     16. 初始化
+     18. 初始化
      ========================================================= */
 
   renderFreeSelect();
   updateMenuStats();
   showScreen('menu');
+
+  SYNC.load();
+  if (SYNC.enabled) {
+    doSyncPull().then(function () {
+      refreshCurrentScreen();
+    });
+  }
 
 })();
 </script>
